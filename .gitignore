@@ -1,0 +1,4 @@
+.cache
+.ipybn_checkpoints
+*venv*
+*pyc
