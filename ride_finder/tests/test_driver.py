@@ -6,12 +6,18 @@ from ride_finder import driver
 
 class TestDriver(unittest.TestCase):
 
+	@patch('ride_finder.driver.StravaApi')
+	def test_populate_athlete_data_no_activities(self, api_mock):
+		api_mock().fetch_activities.return_value = []
+		activities = driver.populate_athlete_data("mock_athlete", "mock_access")
+		self.assertEqual(activities, [])
+
 
 	@patch('ride_finder.driver.StravaApi')
 	def test_populate_athlete_data_no_store(self, api_mock):
 		mock_activities = {"mock": "value"}
 		api_mock().fetch_activities.return_value = mock_activities
-		activities = driver.populate_athlete_data(store=False)
+		activities = driver.populate_athlete_data("mock_athlete", "mock_access", store=False)
 		self.assertTrue(mock_activities, activities)
 
 
@@ -23,7 +29,7 @@ class TestDriver(unittest.TestCase):
 		api_mock().fetch_activities.return_value = mock_activities
 		api_mock().filter_by_type.return_value = mock_activities
 
-		activities = driver.populate_athlete_data(prefix=prefix)
+		activities = driver.populate_athlete_data("mock_athlete", "mock_access", prefix=prefix)
 
 		utils_mock.save_json_file.assert_any_call(mock_activities, STRAVA_DATA_PATH, "2_{}.json".format(api_mock.ACTIVITY_RUN))
 		utils_mock.save_json_file.assert_any_call(mock_activities, STRAVA_DATA_PATH, "2_{}.json".format(api_mock.ACTIVITY_RIDE))
@@ -31,3 +37,7 @@ class TestDriver(unittest.TestCase):
 
 	def test_populate_map_datasets(self):
 		pass
+
+
+if __name__ == '__main__':
+    unittest.main()

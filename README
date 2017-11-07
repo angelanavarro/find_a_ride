@@ -1,0 +1,6 @@
+
+Set env variable for the Mapbox api key
+Set env variable for strava token and athlete id
+
+# To run tests
+python -m pytest from the root directory

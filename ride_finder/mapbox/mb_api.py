@@ -4,7 +4,7 @@ import json
 import uuid
 
 from time import sleep
-from mapbox import Uploader, Datasets
+from mapbox import Uploader, Datasets, MapMatcher
 from ride_finder.app_config import DATASETS_PATH
 
 
@@ -15,7 +15,7 @@ class MapboxApi(object):
     def __init__(self):
         pass
 
-    def create_dataset(name, description):
+    def create_dataset(self, name, description):
         datasets = Datasets()
         res = datasets.create(name=name, description=desciption)
         ds_id = None
@@ -23,6 +23,28 @@ class MapboxApi(object):
             ds = res.json()
             ds_id = ds['id']
         return ds_id
+
+
+    def match_to_lines(self, polylines_geojson):
+        matcher = MapMatcher()
+        corrected_features = []
+        for feature in polylines_geojson['features']:
+            if len(feature['geometry']['coordinates']) > 100:
+                continue
+            try:
+                sleep(1)
+                response = matcher.match(feature, profile='mapbox.cycling')
+                if response.ok:
+                    corrected = response.geojson()['features'][0]
+                    corrected_features.append(corrected_features)
+                else:
+                    logger.warning("Unexpected response while correcting line %s", response.status_code)
+                    corrected_features.append(feature)
+            except:
+                logger.exception("Failed at correcting line. Storing original")
+                corrected_features.append(feature)
+
+        return corrected_features
 
 
     def upload_dataset_features(self, dataset_id, dataset_filename):
@@ -46,7 +68,7 @@ class MapboxApi(object):
         if upload_resp.status_code == 201:
             upload_id = upload_resp.json()['id']
 
-            for i in xrange(0, 12):
+            for i in xrange(0, 15):
                 status_resp = service.status(upload_id).json()
                 if 'complete' == status_resp['complete']:
                     logger.info("Tileset completed for dataset %s", dataset_filename)
@@ -54,4 +76,4 @@ class MapboxApi(object):
                 else:
                     logger.info("Waiting for upload to complete")
                     sleep(5)
-            logger.info("Upload did not complete in the last 60 seconds. Check dashboard.")
+            logger.info("Upload did not complete in the last 75 seconds. Check dashboard.")

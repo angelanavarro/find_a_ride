@@ -1,3 +1,7 @@
+"""
+Utility methods to transform a strava activity file
+to geojson
+"""
 import polyline
 import logging
 
@@ -42,7 +46,7 @@ def polylines_to_geojson(strava_activities):
 
     features = []
     for activity in strava_activities:
-        name = activity.get("name")
+        name = activity.get("name", "Activity")
         map_polyline = activity.get("map", {}).get("summary_polyline")
 
         if not map_polyline:
@@ -77,34 +81,38 @@ def polylines_to_geojson(strava_activities):
 
 
 def compute_activity_properties(activity):
+    # Compute a 'leisure' measure based on how much time i stopped
+    elapsed_time = activity.get("elapsed_time", 0)
+    moving_time = activity.get("moving_time", 0)
+    difficulty = 0
+    chill_score = None
 
-    #convert to ~miles
-    distance = activity.get("distance") / 1609
-    elevation_gain = activity.get("total_elevation_gain")
+    # TODO: Come up with some measure of "chillness"
+    if moving_time:
+        chill_score = elapsed_time / moving_time
 
-    # Make difficulty a mix of distance and feet climbed. Eg. a 100 mile 1000ft ride 100
-    # is easier than a 50 mile 5000 climb 50 + 5000/50 = 150 100 + 1000/100 = 110
-    difficulty = distance + elevation_gain/distance
+    # Multiply the distance by a factor of elevation and distance
+    # 10 miles with 1000ft will be 10 but the same miles with 3000ft will be
+    # 30 and with 200ft will be 2
+    elevation_gain_mi = activity.get("total_elevation_gain", 0) * 3.28
+    distance_mi = activity.get("distance", 0) / 1609.0
+    if distance_mi:
+        difficulty = distance_mi * (elevation_gain_mi/ (distance_mi*100))
 
-    cats = {
-        "easy": (0, 10),
-        "medium": (11, 40),
-        "hard": (41, 80),
-        "v_hard": (81, 150),
-        "epic": (151, 500)
-    }
-
-    category = None
-    for cat, cat_range in cats.items():
-        if cat_range[0] <=  difficulty <= cat_range[1]:
-            category = cat
-            break
+    # split them in categories where difficulty is < 1/2 the distance
+    if difficulty < distance_mi / 2:
+        category = "easy"
+    elif difficulty < distance_mi:
+        category = "medium"
+    else:
+        category = "hard"
 
     properties = {
-        "difficulty": difficulty,
-        "distance": distance,
-        "elevation_gain": elevation_gain,
-        "category": category
+        "distance": activity.get("distance", 0) / 1000,
+        "elevation_gain": activity.get("total_elevation_gain", 0),
+        "difficulty": round(difficulty, 2),
+        "category": category,
+        "chill_score": chill_score
     }
     return properties
 
