@@ -2,3 +2,9 @@
 .ipybn_checkpoints
 *venv*
 *pyc
+ride_finder/mapbox/datasets/*
+ride_finder/strava/stored_data/*
+*ipynb*
+ride_finde.egg*
+*sublime-project
+*sublime-workspace

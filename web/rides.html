@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset='utf-8' />
+    <title>Angelita's Rides</title>
+    <meta name='viewport' content='initial-scale=1,maximum-scale=1,user-scalable=no' />
+    <script src='https://api.tiles.mapbox.com/mapbox-gl-js/v0.41.0/mapbox-gl.js'></script>
+    <link href='https://api.tiles.mapbox.com/mapbox-gl-js/v0.41.0/mapbox-gl.css' rel='stylesheet' />
+    <style>
+      body {
+        margin: 0;
+        padding: 0;
+      }
+
+      #map {
+        position: absolute;
+        top: 0;
+        bottom: 0;
+        width: 100%;
+      }
+
+      .map-overlay {
+          font: 12px/20px 'Helvetica Neue', Arial, Helvetica, sans-serif;
+          position: absolute;
+          width: 200px;
+          top: 0;
+          right: 0;
+          padding: 10px;
+      }
+
+      .map-overlay .map-overlay-inner {
+          background-color: #fff;
+          box-shadow:0 1px 2px rgba(0, 0, 0, 0.10);
+          border-radius: 3px;
+          padding: 10px;
+          margin-bottom: 10px;
+      }
+
+      .map-overlay-inner fieldset {
+          border: none;
+          padding: 0;
+          margin: 0 0 10px;
+      }
+
+      .map-overlay-inner fieldset:last-child {
+          margin: 0;
+      }
+
+      .map-overlay-inner select {
+          width: 100%;
+      }
+
+      .map-overlay-inner label {
+          display: block;
+          font-weight: bold;
+          margin: 0 0 5px;
+      }
+
+      .map-overlay-inner button {
+          display: inline-block;
+          width: 36px;
+          height: 20px;
+          border: none;
+          cursor: pointer;
+      }
+
+      .map-overlay-inner button:focus {
+          outline: none;
+      }
+
+      .map-overlay-inner button:hover {
+          box-shadow:inset 0 0 0 3px rgba(0, 0, 0, 0.10);
+      }
+      #stats {
+        position: absolute;
+        margin-left: 10px;
+        margin-bottom: 40px;
+        top:0;
+        bottom: 1;
+        width: 400px;
+        overflow: auto;
+        background: rgba(255, 255, 255, 0.8);
+    }
+
+
+    </style>
+  </head>
+  <body>
+    <!-- <nav id="menu"></nav> -->
+    <div id='map'></div>
+<!--     <div class='map-overlay'>
+      <div class='map-overlay-inner'>
+          <fieldset>
+              <label>Select layer</label>
+              <select id='layer_select' name='layer' onchange='change_layer'>
+                  <option value='rides-by-length'>Length</option>
+                  <option value='rides-by-difficulty'>Difficulty</option>
+              </select>
+          </fieldset>
+      </div>
+    </div> -->
+    <pre id='stats'></pre>
+    <script>
+      mapboxgl.accessToken = 'pk.eyJ1IjoibWFsZWduYSIsImEiOiJjajlscmxhazE0bWhiMzNsc2R5MWRtbHY3In0.1gBD3M5ilCm7zjt2BsDH9Q';
+      var map = new mapboxgl.Map({
+        container: 'map',
+        style: 'mapbox://styles/malegna/cj9n73akm32s52rnzatx6mbzz'
+      });
+
+      var toggleableLayers = {'rides-by-length': "Color by Length", 'rides-by-difficulty': "Color by Difficulty" };
+      var layer_keys = Object.keys(toggleableLayers)
+      for (var k in layer_keys) {
+        var id = layer_keys[k];
+        // var link = document.createElement('a');
+        // link.href = '#';
+        // link.className = '';
+        // link.textContent = toggleableLayers[id];
+        // link.layerId = id
+
+        // link.onclick = toggleClickedLayer
+
+        // var layers = document.getElementById('menu');
+        // layers.appendChild(link);
+
+        //set up all the highlighting
+        setup_mouse_events(map, id)
+      }
+
+    var selection = document.getElementById("layer_select")
+
+    function change_layer(e) {
+      console.log(e)
+    }
+
+    function toggleClickedLayer(e){
+      var clickedLayer = this.layerId;
+      e.preventDefault();
+      e.stopPropagation();
+
+      var visibility = map.getLayoutProperty(clickedLayer, 'visibility');
+      if (visibility === 'visible') {
+          map.setLayoutProperty(clickedLayer, 'visibility', 'none');
+          this.className = '';
+          if (map.getLayer('trace')) {
+            map.removeLayer('trace')
+            map.removeSource('trace')
+          }
+      } else {
+          this.className = 'active';
+          map.setLayoutProperty(clickedLayer, 'visibility', 'visible');
+      }
+  };
+
+    function highlight_route(e) {
+      document.getElementById('stats').innerHTML = e.features[0].properties.title + "<br/>Elevation Gain (m): " + e.features[0].properties.elevation_gain
+              + "</br>Distance(km): "+ e.features[0].properties.distance
+              + "</br>Chill Score: "+ e.features[0].properties.chill_score;
+    };
+
+    // Display ride info
+    function setup_mouse_events(map, type_str) {
+      map.on('click', type_str, highlight_route);
+
+      map.on('mouseenter', type_str, function () {
+        map.getCanvas().style.cursor = 'pointer';});
+
+      map.on('mouseleave', type_str, function () {
+        map.getCanvas().style.cursor = '';});
+
+      map.on('click', type_str, function (e) {
+        if (map.getLayer('trace')) {
+            map.removeLayer('trace')
+            map.removeSource('trace')
+          }
+          map.addSource('trace', { type: 'geojson', data: e.features[0] });
+          map.addLayer({
+            "id": "trace",
+            "type": "line",
+            "source": "trace",
+            "paint": {
+              "line-color": "yellow",
+              "line-opacity": 0.75,
+              "line-width": 5
+            }
+          });
+      });
+    }
+
+    </script>
+  </body>
+</html>
